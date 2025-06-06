@@ -522,8 +522,7 @@ for i in range(Total_timeslot):
         # Find nearest ground station for this satellite
         nearest_gs = None
         min_distance = float('inf')
-        
-        
+
         # Get satellite position for current timeslot
         if i < len(sat.lat):
             sat_lat = sat.lat.iloc[i]
@@ -559,7 +558,7 @@ for i in range(Total_timeslot):
                 tau_j = 3 + 1  # c_{ISL}(z_j,d^{ISL}_j) + c_{n,s}(z_j,d_j)
                 cache_hit_stats[sat.sat_name]['hits'] += 1
                 sat_cost += tau_j
-                
+
                 # Cooperative caching decision: fetch from neighbor with proper eviction
                 cache_content_with_eviction(sat, requested_content, i)
                 

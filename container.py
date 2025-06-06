@@ -102,6 +102,10 @@ class Satellite:
         # V_n(t): Cache state - set of views stored in satellite n at time t
         self.cache_state = set()  # V_n(t)
         
+        # Neighbor satellites and their cache states
+        self.neighbors = []  # List of neighbor satellite objects
+        self.neighbor_caches = set()  # Union of neighbor cache states
+        
         # Request history
         self.request_history = []
         
@@ -120,6 +124,12 @@ class Satellite:
             initial_cache_size = min(self.storage_constraint_Z, self.total_views // 4)  # Start with 25% capacity
             initial_views = np.random.choice(self.total_views, initial_cache_size, replace=False)
             self.cache_state = set(initial_views)
+    
+    def update_neighbor_caches(self):
+        """Update neighbor_caches based on current neighbor satellite cache states"""
+        self.neighbor_caches = set()
+        for neighbor in self.neighbors:
+            self.neighbor_caches.update(neighbor.cache_state)
     
     def get_cache_state(self):
         """Get current cache state V_n(t)"""
