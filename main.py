@@ -12,6 +12,9 @@ from mpl_toolkits.basemap import Basemap
 timeslot_length = 10
 Total_timeslot = 100
 
+# timeslot_length = 5
+# Total_timeslot = 100
+
 def visualize_leo_satellite_movement(satellite_table, ground_station_list, user_list, timeslot_to_visualize=0):
     """
     Visualize LEO satellite positions, ground stations, and users on Earth for a specific timeslot
@@ -394,7 +397,7 @@ sat_names = list(satellite_table.keys())
 #         sat1_cache = satellite_table[sat1_name].cache_state
 #         sat2_cache = satellite_table[sat2_name].cache_state
 #         overlap = len(sat1_cache.intersection(sat2_cache))
-#         print(f"  {sat1_name} ↔ {sat2_name}: {overlap} common views "
+#         print(f"  {sat1_name} ??? {sat2_name}: {overlap} common views "
 #               f"({overlap/min(len(sat1_cache), len(sat2_cache))*100:.1f}% overlap)")
 
 ################################## Ground Stations ##########################################################
@@ -543,7 +546,7 @@ for i in range(Total_timeslot):
         ########################################################################################
         # Process each request in the range
         for requested_content in request_range:
-            # Calculate transmission cost τ_j based on LEO cooperative caching algorithm
+            # Calculate transmission cost ??_j based on LEO cooperative caching algorithm
             if sat.is_view_cached(requested_content):
                 # Case 1: Content is in local cache V_n(t)
                 tau_j = 1  # c_{n,s}(z_j,d_j) - local serving cost
@@ -554,7 +557,7 @@ for i in range(Total_timeslot):
                 sat.access_frequency[requested_content] = sat.access_frequency.get(requested_content, 0) + 1
                 
             elif requested_content in sat.neighbor_caches:
-                # Case 2: Content is in neighbor cache (V_{n-1}(t) ∪ V_{n+1}(t)) \ V_n(t)
+                # Case 2: Content is in neighbor cache (V_{n-1}(t) ??? V_{n+1}(t)) \ V_n(t)
                 tau_j = 3 + 1  # c_{ISL}(z_j,d^{ISL}_j) + c_{n,s}(z_j,d_j)
                 cache_hit_stats[sat.sat_name]['hits'] += 1
                 sat_cost += tau_j
