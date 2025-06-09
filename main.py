@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -410,21 +411,21 @@ ground_station_locations = [
     {"id": "GS003", "name": "London", "lat": 51.5074, "lon": -0.1278},
     {"id": "GS004", "name": "Tokyo", "lat": 35.6762, "lon": 139.6503},
     {"id": "GS005", "name": "Sydney", "lat": -33.8688, "lon": 151.2093},
-    {"id": "GS006", "name": "Miami", "lat": 25.7617, "lon": -80.1918},
-    {"id": "GS007", "name": "San Francisco", "lat": 37.7749, "lon": -122.4194},
-    {"id": "GS008", "name": "Barcelona", "lat": 41.3851, "lon": 2.1734},
-    {"id": "GS009", "name": "Singapore", "lat": 1.3521, "lon": 103.8198},
-    {"id": "GS010", "name": "Cape Town", "lat": -33.9249, "lon": 18.4241},
-    {"id": "GS011", "name": "Hamburg", "lat": 53.5511, "lon": 9.9937},
-    {"id": "GS012", "name": "Hong Kong", "lat": 22.3193, "lon": 114.1694},
-    {"id": "GS013", "name": "Vancouver", "lat": 49.2827, "lon": -123.1207},
-    {"id": "GS014", "name": "Mumbai", "lat": 19.0760, "lon": 72.8777},
-    {"id": "GS015", "name": "Rio de Janeiro", "lat": -22.9068, "lon": -43.1729},
-    {"id": "GS016", "name": "Seattle", "lat": 47.6062, "lon": -122.3321},
-    {"id": "GS017", "name": "Lisbon", "lat": 38.7223, "lon": -9.1393},
-    {"id": "GS018", "name": "Dubai", "lat": 25.2048, "lon": 55.2708},
-    {"id": "GS019", "name": "Buenos Aires", "lat": -34.6118, "lon": -58.3960},
-    {"id": "GS020", "name": "Tel Aviv", "lat": 32.0853, "lon": 34.7818}
+    {"id": "GS006", "name": "Paris", "lat": 48.8566, "lon": 2.3522},
+    {"id": "GS007", "name": "Berlin", "lat": 52.5200, "lon": 13.4050},
+    {"id": "GS008", "name": "Rome", "lat": 41.9028, "lon": 12.4964},
+    {"id": "GS009", "name": "Madrid", "lat": 40.4168, "lon": -3.7038},
+    {"id": "GS010", "name": "Cairo", "lat": 30.0444, "lon": 31.2357},
+    {"id": "GS011", "name": "Lagos", "lat": 6.5244, "lon": 3.3792},
+    {"id": "GS012", "name": "Johannesburg", "lat": -26.2041, "lon": 28.0473},
+    {"id": "GS013", "name": "Nairobi", "lat": -1.2921, "lon": 36.8219},
+    {"id": "GS014", "name": "Casablanca", "lat": 33.5731, "lon": -7.5898},
+    {"id": "GS015", "name": "Stockholm", "lat": 59.3293, "lon": 18.0686},
+    {"id": "GS016", "name": "Oslo", "lat": 59.9139, "lon": 10.7522},
+    {"id": "GS017", "name": "Vienna", "lat": 48.2082, "lon": 16.3738},
+    {"id": "GS018", "name": "Addis Ababa", "lat": 9.1450, "lon": 40.4897},
+    {"id": "GS019", "name": "Amsterdam", "lat": 52.3676, "lon": 4.9041},
+    {"id": "GS020", "name": "Tunis", "lat": 36.8065, "lon": 10.1815}
 ]
 
 # Create ground station CSV data
@@ -482,6 +483,22 @@ for i in range(Total_timeslot):
             user.elevation = best_elevation
             user.sat = best_sat
             best_sat.serving_users.append(user.user_id)
+
+    # Update neighbor cache information BEFORE processing requests
+    sat_names = list(satellite_table.keys())
+    for sat in satellite_table.values():
+        current_idx = sat_names.index(sat.sat_name)
+        
+        # Get neighbor caches (previous and next satellite)
+        neighbor_cache_union = set()
+        if current_idx > 0:
+            prev_sat = satellite_table[sat_names[current_idx - 1]]
+            neighbor_cache_union.update(prev_sat.cache_state)
+        if current_idx < len(sat_names) - 1:
+            next_sat = satellite_table[sat_names[current_idx + 1]]
+            neighbor_cache_union.update(next_sat.cache_state)
+        
+        sat.neighbor_caches = neighbor_cache_union
 
     # Simulate content requests and cooperative caching decisions
     timeslot_total_cost = 0
@@ -546,7 +563,7 @@ for i in range(Total_timeslot):
         ########################################################################################
         # Process each request in the range
         for requested_content in request_range:
-            # Calculate transmission cost ??_j based on LEO cooperative caching algorithm
+            # Calculate transmission cost £n_j based on LEO cooperative caching algorithm
             if sat.is_view_cached(requested_content):
                 # Case 1: Content is in local cache V_n(t)
                 tau_j = 1  # c_{n,s}(z_j,d_j) - local serving cost
@@ -558,7 +575,7 @@ for i in range(Total_timeslot):
                 sat.access_frequency[requested_content] = sat.access_frequency.get(requested_content, 0) + 1
                 
             elif requested_content in sat.neighbor_caches:
-                # Case 2: Content is in neighbor cache (V_{n-1}(t) ??? V_{n+1}(t)) \ V_n(t)
+                # Case 2: Content is in neighbor cache (V_{n-1}(t) ¡å V_{n+1}(t)) \ V_n(t)
                 tau_j = 3 + 1  # c_{ISL}(z_j,d^{ISL}_j) + c_{n,s}(z_j,d_j)
                 cache_hit_stats[sat.sat_name]['hits'] += 1
                 sat_cost += tau_j
@@ -584,22 +601,6 @@ for i in range(Total_timeslot):
                 
                 # Caching decision with proper storage constraint and eviction
                 cache_content_with_eviction(sat, requested_content, i)
-        
-        # Simulate neighbor cache sharing (simplified)
-        # In real implementation, this would be based on ISL communication
-        sat_names = list(satellite_table.keys())
-        current_idx = sat_names.index(sat.sat_name)
-        
-        # Get neighbor caches (previous and next satellite)
-        neighbor_cache_union = set()
-        if current_idx > 0:
-            prev_sat = satellite_table[sat_names[current_idx - 1]]
-            neighbor_cache_union.update(prev_sat.cache_state)
-        if current_idx < len(sat_names) - 1:
-            next_sat = satellite_table[sat_names[current_idx + 1]]
-            neighbor_cache_union.update(next_sat.cache_state)
-        
-        sat.neighbor_caches = neighbor_cache_union
         
         # Add to satellite's total cost
         satellite_costs[sat.sat_name] += sat_cost
