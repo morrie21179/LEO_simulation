@@ -9,6 +9,9 @@ from mpl_toolkits.basemap import Basemap
 import numpy as np
 from mpl_toolkits.basemap import Basemap
 
+# Define video size per view (in MB)
+video_size_per_view_mb = 60
+
 timeslot_length = 10
 Total_timeslot = 100
 
@@ -316,9 +319,6 @@ def cache_content_with_eviction(satellite, content_id, timeslot):
 # load user location from users.csv
 users = pd.read_csv('data/users.csv')
 
-# Define video size per view (in MB)
-video_size_per_view_mb = 60
-
 # create a list of User objects with video size
 user_list = []
 for i in range(len(users)):
@@ -551,6 +551,7 @@ for i in range(Total_timeslot):
                 # Case 1: Content is in local cache V_n(t)
                 tau_j = 1  # c_{n,s}(z_j,d_j) - local serving cost
                 cache_hit_stats[sat.sat_name]['hits'] += 1
+                sat_cost += tau_j
                 
                 # Update access statistics
                 sat.last_access_time[requested_content] = i
