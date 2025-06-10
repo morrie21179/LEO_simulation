@@ -14,7 +14,7 @@ from mpl_toolkits.basemap import Basemap
 video_size_per_view_mb = 60
 
 timeslot_length = 10
-Total_timeslot = 100
+Total_timeslot = 10
 
 # timeslot_length = 5
 # Total_timeslot = 100
@@ -335,7 +335,7 @@ user_list.sort()
 # load satellite position
 satellite_table = {}
 total_views = 40000  # Total number of views in multiview video system
-storage_constraint_Z = 1800  # Storage constraint in number of views
+storage_constraint_Z = 17500  # Storage constraint in number of views
 
 for file in os.listdir('data/starlink115/satellite_trace'):
     if file.endswith('.csv'):
@@ -562,86 +562,165 @@ for i in range(Total_timeslot):
         
         ############################## Online Algorithm (Phase 1) ##############################
         ########################################################################################
-        # Process each request in the range
-        for requested_content in request_range:
-            # Calculate transmission cost £n_j based on LEO cooperative caching algorithm
-            if sat.is_view_cached(requested_content):
-                # Case 1: Content is in local cache V_n(t)
-                tau_j = 1  # c_{n,s}(z_j,d_j) - local serving cost
-                cache_hit_stats[sat.sat_name]['hits'] += 1
-                sat_cost += tau_j
+        # # Process each request in the range
+        # for requested_content in request_range:
+        #     # Calculate transmission cost £n_j based on LEO cooperative caching algorithm
+        #     if sat.is_view_cached(requested_content):
+        #         # Case 1: Content is in local cache V_n(t)
+        #         tau_j = 1  # c_{n,s}(z_j,d_j) - local serving cost
+        #         cache_hit_stats[sat.sat_name]['hits'] += 1
+        #         sat_cost += tau_j
                 
-                # Update access statistics
-                sat.last_access_time[requested_content] = i
-                sat.access_frequency[requested_content] = sat.access_frequency.get(requested_content, 0) + 1
+        #         # Update access statistics
+        #         sat.last_access_time[requested_content] = i
+        #         sat.access_frequency[requested_content] = sat.access_frequency.get(requested_content, 0) + 1
                 
-            elif requested_content in sat.neighbor_caches:
-                # Case 2: Content is in neighbor cache (V_{n-1}(t) ¡å V_{n+1}(t)) \ V_n(t)
-                tau_j = 3 + 1  # c_{ISL}(z_j,d^{ISL}_j) + c_{n,s}(z_j,d_j)
-                cache_hit_stats[sat.sat_name]['hits'] += 1
-                sat_cost += tau_j
+        #     elif requested_content in sat.neighbor_caches:
+        #         # Case 2: Content is in neighbor cache (V_{n-1}(t) ¡å V_{n+1}(t)) \ V_n(t)
+        #         tau_j = 3 + 1  # c_{ISL}(z_j,d^{ISL}_j) + c_{n,s}(z_j,d_j)
+        #         cache_hit_stats[sat.sat_name]['hits'] += 1
+        #         sat_cost += tau_j
 
-                # Cooperative caching decision: fetch from neighbor with proper eviction
-                cache_content_with_eviction(sat, requested_content, i)
+        #         # Cooperative caching decision: fetch from neighbor with proper eviction
+        #         cache_content_with_eviction(sat, requested_content, i)
                 
-            else:
-                # Case 3: Content not in local or neighbor cache - fetch from ground station
-                if nearest_gs and nearest_gs.has_view(requested_content):
-                    # Use ground station to transmit content to satellite
-                    transmitted_views = nearest_gs.transmit_to_satellite(sat, [requested_content])
+        #     else:
+        #         # Case 3: Content not in local or neighbor cache - fetch from ground station
+        #         if nearest_gs and nearest_gs.has_view(requested_content):
+        #             # Use ground station to transmit content to satellite
+        #             transmitted_views = nearest_gs.transmit_to_satellite(sat, [requested_content])
                     
-                    # Calculate transmission cost using ground station method
-                    data_size_mb = len(transmitted_views) * video_size_per_view_mb
-                    tau_j = nearest_gs.calculate_transmission_cost(min_distance, data_size_mb) + 1
+        #             # Calculate transmission cost using ground station method
+        #             data_size_mb = len(transmitted_views) * video_size_per_view_mb
+        #             tau_j = nearest_gs.calculate_transmission_cost(min_distance, data_size_mb) + 1
+        #         else:
+        #             # Fallback cost if no ground station available or content not available
+        #             tau_j = 50  # High cost for unavailable content
+                
+        #         cache_hit_stats[sat.sat_name]['misses'] += 1
+        #         sat_cost += tau_j
+                
+        #         # Caching decision with proper storage constraint and eviction
+        #         cache_content_with_eviction(sat, requested_content, i)
+
+        #     # Dynamic Programming - Calculate £g_{h,j}
+        #     k = max(requested_content, D)
+        #     mu_values = {}
+
+        #     # Calculate £g_{h,j} for h from max(j-D, h) to j ? i ? j
+        #     for idx in range(k, requested_content):
+        #         # Calculate the minimum cost for serving content h at timeslot j
+        #         # £g_{h,j} = min_{max(j-D,h) ? i ? j} (£n_j + £g_{h,i} + (£\(j-i) + T_{DIBR})(j-i-1))
+        #         min_cost = float('inf')
+
+        #         # DIBR processing cost: (£\(j-i) + T_DIBR)(j-i-1)
+        #         alpha = 0.1  # Processing cost factor
+        #         T_DIBR = 2   # Base DIBR processing time
+        #         j_i = requested_content - idx
+        #         dibr_cost = (alpha * j_i + T_DIBR) * max(j_i - 1, 0)
+
+        #         # Total cost for this choice of i
+        #         total_cost = tau_j 
+
+        #         if total_cost < min_cost:
+        #             min_cost = total_cost
+
+        #         # # Store the minimum cost
+        #         # mu_values[(h, requested_content)] = min_cost
+            
+        #     # The optimal cost for serving this content is £g_{requested_content, requested_content}
+        #     optimal_cost = mu_values.get((requested_content, requested_content), tau_j)
+            
+        #     # Update the satellite cost with the optimal cost instead of just tau_j
+        #     sat_cost = sat_cost - tau_j + optimal_cost  # Replace the previously added tau_j
+        if request_range:
+            h = min(request_range)
+            l = max(request_range)
+            alpha = 0.1
+            T_DIBR = 2
+            D = 3
+
+            mu = dict()
+            prev = dict()
+            tau_dict = dict()
+
+            def get_tau_j(view_j):
+                if sat.is_view_cached(view_j):
+                    return 1
+                elif view_j in sat.neighbor_caches:
+                    return 4
+                elif nearest_gs and nearest_gs.has_view(view_j):
+                    # return nearest_gs.calculate_transmission_cost(min_distance, video_size_per_view_mb) + 1
+                    return 20
                 else:
-                    # Fallback cost if no ground station available or content not available
-                    tau_j = 50  # High cost for unavailable content
-                
-                cache_hit_stats[sat.sat_name]['misses'] += 1
-                sat_cost += tau_j
-                
-                # Caching decision with proper storage constraint and eviction
-                cache_content_with_eviction(sat, requested_content, i)
+                    return 40
 
-            # Dynamic Programming - Calculate £g_{h,j}
-            k = max(requested_content, D)
-            # Initialize £g values for this content request
-            mu_values = {}
-            
-            # Calculate £g_{h,j} for h from max(j-D, h) to j ? i ? j
-            for h in range(k, requested_content):
-                # Calculate the minimum cost for serving content h at timeslot j
-                # £g_{h,j} = min_{max(j-D,h) ? i ? j} (£n_j + £g_{h,i} + (£\(j-i) + T_{DIBR})(j-i-1))
+            # DP initial condition
+            tau_h = get_tau_j(h)
+            mu[h] = tau_h
+            prev[h] = None
+            tau_dict[h] = tau_h
+
+            # Fill DP table for [h+1, l]
+            for j in range(h+1, l+1):
+                tau_j = get_tau_j(j)
+                tau_dict[j] = tau_j
                 min_cost = float('inf')
-                
-                for idx in range(max(requested_content - D, h), requested_content + 1):
-                    # Base transmission cost
-                    base_cost = tau_j
-                    
-                    # Previous £g value (0 if this is the first calculation)
-                    prev_mu = mu_values.get((h, idx), 0)
-                    
-                    # DIBR processing cost: (£\(j-i) + T_DIBR)(j-i-1)
-                    alpha = 0.1  # Processing cost factor
-                    T_DIBR = 2   # Base DIBR processing time
-                    j_i = requested_content - idx
-                    dibr_cost = (alpha * j_i + T_DIBR) * max(j_i - 1, 0)
-                    
-                    # Total cost for this choice of i
-                    total_cost = base_cost + prev_mu + dibr_cost
-                    
-                    if total_cost < min_cost:
-                        min_cost = total_cost
-                
-                # Store the minimum cost
-                mu_values[(h, requested_content)] = min_cost
-            
-            # The optimal cost for serving this content is £g_{requested_content, requested_content}
-            optimal_cost = mu_values.get((requested_content, requested_content), tau_j)
-            
-            # Update the satellite cost with the optimal cost instead of just tau_j
-            sat_cost = sat_cost - tau_j + optimal_cost  # Replace the previously added tau_j
-                
+                best_i = None
+                for i in range(max(j-D, h), j):
+                    dibr_cost = (alpha * (j - i) + T_DIBR) * (j - i - 1)
+                    cost = tau_j + mu[i] + dibr_cost
+                    if cost < min_cost:
+                        min_cost = cost
+                        best_i = i
+                mu[j] = min_cost
+                prev[j] = best_i
+
+            # Backtrack to get transfer points (fetch points)
+            transfer_points = []
+            j = l
+            while j is not None:
+                transfer_points.append(j)
+                j = prev[j]
+            transfer_points = transfer_points[::-1]
+
+            # Decide sets for fetch, DIBR, ISL, etc.
+            V_fetch = set(transfer_points)
+            V_DIBR = set()
+            V_ISL = set()
+            V_trans = set()
+            V_evicted = set()
+
+            # Classify each subinterval
+            for idx in range(len(transfer_points)-1):
+                start = transfer_points[idx]
+                end = transfer_points[idx+1]
+                # If end > start+1, then views in between are synthesized by DIBR
+                if end > start+1:
+                    for synth in range(start+1, end):
+                        V_DIBR.add(synth)
+
+            # For each fetch point, classify ISL/local/GS
+            for v in V_fetch:
+                if sat.is_view_cached(v):
+                    V_trans.add(v)  # Already cached, just transmit
+                    cache_hit_stats[sat.sat_name]['hits'] += 1
+                    sat.last_access_time[v] = i
+                    sat.access_frequency[v] = sat.access_frequency.get(v, 0) + 1
+                elif v in sat.neighbor_caches:
+                    V_ISL.add(v)
+                    cache_hit_stats[sat.sat_name]['hits'] += 1
+                    cache_content_with_eviction(sat, v, i)
+                else:
+                    # Fetch from ground station (or fallback)
+                    cache_hit_stats[sat.sat_name]['misses'] += 1
+                    if nearest_gs and nearest_gs.has_view(v):
+                        nearest_gs.transmit_to_satellite(sat, [v])
+                        cache_content_with_eviction(sat, v, i)
+                    # If needed, track evicted views here
+
+            # Add the DP minimum total cost
+            sat_cost += mu[l]       
 
         # Add to satellite's total cost
         satellite_costs[sat.sat_name] += sat_cost
@@ -659,11 +738,11 @@ for i in range(Total_timeslot):
             nearest_gs.disconnect_satellite(sat)
         
         nearest_gs_name = nearest_gs.name if nearest_gs else "None"
-        print(f'Satellite {sat.sat_name}: serving {len(sat.serving_users)} users, '
-              f'cost: {sat_cost}, cache size: {len(sat.cache_state)}/{sat.storage_constraint_Z}, '
-              f'utilization: {cache_utilization:.2f}, hit rate: {hit_rate:.2f}, '
-              f'storage: {sat.get_storage_used_mb():.1f}MB/{sat.get_storage_capacity_mb():.1f}MB, '
-              f'neighbor cache size: {len(sat.neighbor_caches)}, nearest GS: {nearest_gs_name}')
+        # print(f'Satellite {sat.sat_name}: serving {len(sat.serving_users)} users, '
+        #       f'cost: {sat_cost}, cache size: {len(sat.cache_state)}/{sat.storage_constraint_Z}, '
+        #       f'utilization: {cache_utilization:.2f}, hit rate: {hit_rate:.2f}, '
+        #       f'storage: {sat.get_storage_used_mb():.1f}MB/{sat.get_storage_capacity_mb():.1f}MB, '
+        #       f'neighbor cache size: {len(sat.neighbor_caches)}, nearest GS: {nearest_gs_name}')
     
     timeslot_costs.append(timeslot_total_cost)
     print(f'Total served users: {sum(len(sat.serving_users) for sat in satellite_table.values())}')
