@@ -517,6 +517,7 @@ for i in range(Total_timeslot):
             # Generate multiview video request using User methods
             view_index = random.randint(1, total_views)
             view_range_B = 3
+            D = 3
             
             success, result = user.generate_request(view_index, view_range_B)
             
@@ -601,7 +602,47 @@ for i in range(Total_timeslot):
                 
                 # Caching decision with proper storage constraint and eviction
                 cache_content_with_eviction(sat, requested_content, i)
-        
+
+            # Dynamic Programming - Calculate £g_{h,j}
+            k = max(requested_content, D)
+            # Initialize £g values for this content request
+            mu_values = {}
+            
+            # Calculate £g_{h,j} for h from max(j-D, h) to j ? i ? j
+            for h in range(k, requested_content):
+                # Calculate the minimum cost for serving content h at timeslot j
+                # £g_{h,j} = min_{max(j-D,h) ? i ? j} (£n_j + £g_{h,i} + (£\(j-i) + T_{DIBR})(j-i-1))
+                min_cost = float('inf')
+                
+                for idx in range(max(requested_content - D, h), requested_content + 1):
+                    # Base transmission cost
+                    base_cost = tau_j
+                    
+                    # Previous £g value (0 if this is the first calculation)
+                    prev_mu = mu_values.get((h, idx), 0)
+                    
+                    # DIBR processing cost: (£\(j-i) + T_DIBR)(j-i-1)
+                    alpha = 0.1  # Processing cost factor
+                    T_DIBR = 2   # Base DIBR processing time
+                    j_i = requested_content - idx
+                    dibr_cost = (alpha * j_i + T_DIBR) * max(j_i - 1, 0)
+                    
+                    # Total cost for this choice of i
+                    total_cost = base_cost + prev_mu + dibr_cost
+                    
+                    if total_cost < min_cost:
+                        min_cost = total_cost
+                
+                # Store the minimum cost
+                mu_values[(h, requested_content)] = min_cost
+            
+            # The optimal cost for serving this content is £g_{requested_content, requested_content}
+            optimal_cost = mu_values.get((requested_content, requested_content), tau_j)
+            
+            # Update the satellite cost with the optimal cost instead of just tau_j
+            sat_cost = sat_cost - tau_j + optimal_cost  # Replace the previously added tau_j
+                
+
         # Add to satellite's total cost
         satellite_costs[sat.sat_name] += sat_cost
         timeslot_total_cost += sat_cost
